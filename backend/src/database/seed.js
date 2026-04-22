@@ -15,12 +15,10 @@ const seedDatabase = (db) => {
   if (!existingUser) {
     const passwordHash = bcrypt.hashSync(DEFAULT_ADMIN.password, 10)
 
-    db.prepare(
-      `
-        INSERT INTO users (name, email, password_hash, role)
-        VALUES (?, ?, ?, ?)
-      `
-    ).run(
+    db.prepare(`
+      INSERT INTO users (name, email, password_hash, role)
+      VALUES (?, ?, ?, ?)
+    `).run(
       DEFAULT_ADMIN.name,
       DEFAULT_ADMIN.email,
       passwordHash,
