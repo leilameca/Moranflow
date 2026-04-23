@@ -84,6 +84,20 @@ const formatInvoicePreviewDate = (value) => {
   }).format(date)
 }
 
+const buildInvoiceClientLines = (project) =>
+  [
+    project?.clientName,
+    project?.businessName || 'Cliente independiente',
+    project?.clientEmail,
+    project?.clientPhone,
+  ].filter(Boolean)
+
+const getDefaultInvoiceDueDate = () => {
+  const nextWeek = new Date()
+  nextWeek.setDate(nextWeek.getDate() + 7)
+  return nextWeek.toISOString().slice(0, 10)
+}
+
 export const ProjectsPage = () => {
   const { copy, locale } = useLanguage()
   const [projects, setProjects] = useState([])
@@ -1036,18 +1050,14 @@ export const ProjectsPage = () => {
                       ],
                       [
                         'Facturado a',
-                        [
-                          selectedProject.clientName,
-                          selectedProject.businessName || 'Cliente independiente',
-                          selectedProject.clientEmail || selectedProject.clientPhone || '-',
-                        ],
+                        buildInvoiceClientLines(selectedProject),
                       ],
                       ['Fecha de emision', [formatInvoicePreviewDate(new Date())]],
                       [
                         'Fecha limite de pago',
                         [
                           formatInvoicePreviewDate(
-                            selectedProject.dueDate || dayjs().add(7, 'day').format('YYYY-MM-DD')
+                            selectedProject.dueDate || getDefaultInvoiceDueDate()
                           ),
                         ],
                       ],
@@ -1066,27 +1076,69 @@ export const ProjectsPage = () => {
                   </div>
 
                   <div className="overflow-hidden rounded-[18px] border border-[rgba(15,15,15,0.06)] bg-white">
-                    <div className="grid grid-cols-[52px_minmax(0,1fr)_74px_116px_116px] bg-[var(--moran-ink)] px-4 py-3 text-[10px] uppercase tracking-[0.2em] text-white">
+                    <div className="hidden grid-cols-[42px_minmax(0,1fr)_56px_132px_132px] bg-[var(--moran-ink)] px-4 py-3 text-[10px] uppercase tracking-[0.2em] text-white sm:grid">
                       <span>#</span>
                       <span>Descripcion del servicio</span>
                       <span className="text-center">Cant.</span>
                       <span className="text-right">Precio unit.</span>
                       <span className="text-right">Total</span>
                     </div>
-                    <div className="grid grid-cols-[52px_minmax(0,1fr)_74px_116px_116px] items-start border-t border-[rgba(214,164,164,0.35)] px-4 py-4 text-sm text-[var(--moran-ink)]">
-                      <span>01</span>
-                      <div>
-                        <p className="font-semibold">{selectedProject.serviceName}</p>
-                        <p className="mt-1 text-xs leading-6 text-[var(--moran-soft)]">
-                          {invoiceNotes ||
-                            selectedProject.description ||
-                            selectedProject.notes ||
-                            selectedProject.title}
-                        </p>
+                    <div className="border-t border-[rgba(214,164,164,0.35)] px-4 py-4 text-sm text-[var(--moran-ink)]">
+                      <div className="space-y-3 sm:hidden">
+                        <div className="flex items-start justify-between gap-3">
+                          <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--moran-soft)]">
+                            #01
+                          </span>
+                          <span className="text-sm font-semibold">
+                            {formatInvoiceMoney(selectedProject.agreedPrice)}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="font-semibold">{selectedProject.serviceName}</p>
+                          <p className="mt-1 text-xs leading-6 text-[var(--moran-soft)]">
+                            {invoiceNotes ||
+                              selectedProject.description ||
+                              selectedProject.notes ||
+                              selectedProject.title}
+                          </p>
+                        </div>
+                        <div className="grid gap-2 rounded-[14px] bg-[rgba(245,241,237,0.9)] px-3 py-3 text-xs sm:hidden">
+                          <div className="flex items-center justify-between">
+                            <span className="uppercase tracking-[0.14em] text-[var(--moran-soft)]">
+                              Cant.
+                            </span>
+                            <span>1</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="uppercase tracking-[0.14em] text-[var(--moran-soft)]">
+                              Precio unit.
+                            </span>
+                            <span>{formatInvoiceMoney(selectedProject.agreedPrice)}</span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="uppercase tracking-[0.14em] text-[var(--moran-soft)]">
+                              Total
+                            </span>
+                            <span>{formatInvoiceMoney(selectedProject.agreedPrice)}</span>
+                          </div>
+                        </div>
                       </div>
-                      <span className="text-center">1</span>
-                      <span className="text-right">{formatInvoiceMoney(selectedProject.agreedPrice)}</span>
-                      <span className="text-right">{formatInvoiceMoney(selectedProject.agreedPrice)}</span>
+
+                      <div className="hidden grid-cols-[42px_minmax(0,1fr)_56px_132px_132px] items-start text-sm sm:grid">
+                        <span>01</span>
+                        <div>
+                          <p className="font-semibold">{selectedProject.serviceName}</p>
+                          <p className="mt-1 text-xs leading-6 text-[var(--moran-soft)]">
+                            {invoiceNotes ||
+                              selectedProject.description ||
+                              selectedProject.notes ||
+                              selectedProject.title}
+                          </p>
+                        </div>
+                        <span className="text-center">1</span>
+                        <span className="text-right">{formatInvoiceMoney(selectedProject.agreedPrice)}</span>
+                        <span className="text-right">{formatInvoiceMoney(selectedProject.agreedPrice)}</span>
+                      </div>
                     </div>
                   </div>
 

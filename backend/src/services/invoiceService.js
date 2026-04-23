@@ -213,6 +213,14 @@ const getPaymentMethodLabel = (paymentMethod) => {
   return labels[paymentMethod] || 'Por definir'
 }
 
+const buildClientBillingLines = (invoice) =>
+  [
+    invoice.client_name,
+    invoice.business_name || 'Cliente independiente',
+    invoice.client_email,
+    invoice.client_phone,
+  ].filter(Boolean)
+
 const generateInvoicePdf = (res, invoice) => {
   const doc = new PDFDocument({
     size: 'A4',
@@ -351,12 +359,7 @@ const generateInvoicePdf = (res, invoice) => {
 
   drawMetaBlock(
     'Facturado a',
-    [
-      invoice.client_name,
-      invoice.business_name || 'Cliente independiente',
-      invoice.client_email || 'Sin correo registrado',
-      invoice.client_phone || invoice.client_instagram || 'Sin contacto adicional',
-    ],
+    buildClientBillingLines(invoice),
     bodyX + columnWidth + 24,
     metaTop,
     columnWidth
@@ -380,12 +383,25 @@ const generateInvoicePdf = (res, invoice) => {
 
   const tableTop = 372
   const tableWidth = bodyWidth
+  const columnWidthMap = {
+    number: 38,
+    description: 210,
+    quantity: 45,
+    unitPrice: 103,
+    total: 103,
+  }
   const columnX = {
     number: bodyX,
-    description: bodyX + 46,
-    quantity: bodyX + 326,
-    unitPrice: bodyX + 392,
-    total: bodyX + 490,
+    description: bodyX + columnWidthMap.number,
+    quantity: bodyX + columnWidthMap.number + columnWidthMap.description,
+    unitPrice:
+      bodyX + columnWidthMap.number + columnWidthMap.description + columnWidthMap.quantity,
+    total:
+      bodyX +
+      columnWidthMap.number +
+      columnWidthMap.description +
+      columnWidthMap.quantity +
+      columnWidthMap.unitPrice,
   }
 
   const descriptionText = invoice.service_name
@@ -394,9 +410,7 @@ const generateInvoicePdf = (res, invoice) => {
     'Servicio profesional desarrollado por Moran Studio.'
   const descriptionHeight = Math.max(
     doc.heightOfString(descriptionSubtext, {
-      width: 250,
-      font: 'Helvetica',
-      size: 10,
+      width: columnWidthMap.description - 12,
       lineGap: 2,
     }),
     14
@@ -409,10 +423,21 @@ const generateInvoicePdf = (res, invoice) => {
     .font('Helvetica')
     .fontSize(10)
     .text('#', columnX.number + 10, tableTop + 11)
-    .text('Descripcion del servicio', columnX.description + 6, tableTop + 11)
-    .text('Cant.', columnX.quantity, tableTop + 11, { width: 44, align: 'center' })
-    .text('Precio unit.', columnX.unitPrice, tableTop + 11, { width: 76, align: 'right' })
-    .text('Total', columnX.total, tableTop + 11, { width: 58, align: 'right' })
+    .text('Descripcion del servicio', columnX.description + 6, tableTop + 11, {
+      width: columnWidthMap.description - 12,
+    })
+    .text('Cant.', columnX.quantity, tableTop + 11, {
+      width: columnWidthMap.quantity,
+      align: 'center',
+    })
+    .text('Precio unit.', columnX.unitPrice, tableTop + 11, {
+      width: columnWidthMap.unitPrice - 8,
+      align: 'right',
+    })
+    .text('Total', columnX.total, tableTop + 11, {
+      width: columnWidthMap.total - 8,
+      align: 'right',
+    })
 
   const rowTop = tableTop + 32
   doc.rect(bodyX, rowTop, tableWidth, rowHeight).fill(colors.paper)
@@ -433,30 +458,30 @@ const generateInvoicePdf = (res, invoice) => {
     .font('Helvetica-Bold')
     .fontSize(12)
     .text(descriptionText, columnX.description + 6, rowTop + 10, {
-      width: 250,
+      width: columnWidthMap.description - 12,
     })
     .font('Helvetica')
     .fillColor(colors.olive)
     .fontSize(10)
     .text(descriptionSubtext, columnX.description + 6, rowTop + 28, {
-      width: 250,
+      width: columnWidthMap.description - 12,
       lineGap: 2,
     })
 
   doc
     .fillColor(colors.ink)
     .font('Helvetica')
-    .fontSize(11)
+    .fontSize(10)
     .text('1', columnX.quantity, rowTop + 18, {
-      width: 44,
+      width: columnWidthMap.quantity,
       align: 'center',
     })
     .text(formatMoney(subtotal), columnX.unitPrice, rowTop + 18, {
-      width: 76,
+      width: columnWidthMap.unitPrice - 8,
       align: 'right',
     })
     .text(formatMoney(total), columnX.total, rowTop + 18, {
-      width: 58,
+      width: columnWidthMap.total - 8,
       align: 'right',
     })
 
