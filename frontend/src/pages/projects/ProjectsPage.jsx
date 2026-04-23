@@ -8,6 +8,7 @@ import { Card } from '../../components/ui/Card.jsx'
 import { DataTable } from '../../components/ui/DataTable.jsx'
 import { EmptyState } from '../../components/ui/EmptyState.jsx'
 import { InputField } from '../../components/ui/InputField.jsx'
+import { MobileSectionTabs } from '../../components/ui/MobileSectionTabs.jsx'
 import { NoticeBanner } from '../../components/ui/NoticeBanner.jsx'
 import { PageHeader } from '../../components/ui/PageHeader.jsx'
 import { SelectField } from '../../components/ui/SelectField.jsx'
@@ -105,6 +106,7 @@ export const ProjectsPage = () => {
   const [services, setServices] = useState([])
   const [selectedId, setSelectedId] = useState(null)
   const [selectedProject, setSelectedProject] = useState(null)
+  const [mobileSection, setMobileSection] = useState('pipeline')
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [paymentFilter, setPaymentFilter] = useState('all')
@@ -364,12 +366,14 @@ export const ProjectsPage = () => {
     setInvoiceNotes('')
     setFeedback('')
     setError('')
+    setMobileSection('editor')
   }
 
   const handleProjectSelect = (project) => {
     setSelectedId(project.id)
     setFeedback('')
     setError('')
+    setMobileSection('editor')
   }
 
   const handleFormChange = (event) => {
@@ -444,6 +448,7 @@ export const ProjectsPage = () => {
       setForm(emptyProjectForm)
       setPaymentForm(createEmptyPaymentForm())
       setInvoiceNotes('')
+      setMobileSection('pipeline')
       await loadProjects()
     } catch (deleteError) {
       setError(deleteError.response?.data?.message || copy.projects.feedback.deleteError)
@@ -555,7 +560,7 @@ export const ProjectsPage = () => {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         <Card className="p-5">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--moran-soft)]">
             {copy.projects.stats.totalProjects}
@@ -600,8 +605,34 @@ export const ProjectsPage = () => {
         </Card>
       ) : null}
 
+      <MobileSectionTabs
+        className="sticky top-3 z-20"
+        value={mobileSection}
+        onChange={setMobileSection}
+        tabs={[
+          {
+            value: 'pipeline',
+            label: locale === 'es' ? 'Pipeline' : 'Pipeline',
+          },
+          {
+            value: 'editor',
+            label: locale === 'es' ? 'Editor' : 'Editor',
+          },
+          {
+            value: 'payments',
+            label: locale === 'es' ? 'Pagos' : 'Payments',
+          },
+          {
+            value: 'invoices',
+            label: locale === 'es' ? 'Facturas' : 'Invoices',
+          },
+        ]}
+      />
+
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1.35fr)_400px]">
-        <Card className="p-5 sm:p-6">
+        <Card
+          className={`${mobileSection !== 'pipeline' ? 'hidden xl:block' : ''} p-5 sm:p-6`}
+        >
           <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--moran-soft)]">
@@ -696,7 +727,9 @@ export const ProjectsPage = () => {
           />
         </Card>
 
-        <Card className="p-5 sm:p-6">
+        <Card
+          className={`${mobileSection !== 'editor' ? 'hidden xl:block' : ''} p-5 sm:p-6`}
+        >
           <div className="mb-6">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--moran-soft)]">
               {copy.projects.sections.editor}
@@ -834,7 +867,9 @@ export const ProjectsPage = () => {
       </div>
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-        <Card className="p-5 sm:p-6">
+        <Card
+          className={`${mobileSection !== 'payments' ? 'hidden xl:block' : ''} p-5 sm:p-6`}
+        >
           <div className="mb-6 flex items-center gap-3">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[rgba(214,164,164,0.16)] text-[var(--moran-ink)]">
               <Wallet size={20} />
@@ -986,7 +1021,9 @@ export const ProjectsPage = () => {
           )}
         </Card>
 
-        <Card className="p-5 sm:p-6">
+        <Card
+          className={`${mobileSection !== 'invoices' ? 'hidden xl:block' : ''} p-5 sm:p-6`}
+        >
             <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--moran-soft)]">

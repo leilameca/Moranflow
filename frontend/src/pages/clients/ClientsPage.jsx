@@ -7,6 +7,7 @@ import { Card } from '../../components/ui/Card.jsx'
 import { DataTable } from '../../components/ui/DataTable.jsx'
 import { EmptyState } from '../../components/ui/EmptyState.jsx'
 import { InputField } from '../../components/ui/InputField.jsx'
+import { MobileSectionTabs } from '../../components/ui/MobileSectionTabs.jsx'
 import { NoticeBanner } from '../../components/ui/NoticeBanner.jsx'
 import { PageHeader } from '../../components/ui/PageHeader.jsx'
 import { SelectField } from '../../components/ui/SelectField.jsx'
@@ -31,6 +32,7 @@ export const ClientsPage = () => {
   const [clients, setClients] = useState([])
   const [form, setForm] = useState(emptyForm)
   const [selectedId, setSelectedId] = useState(null)
+  const [mobileSection, setMobileSection] = useState('directory')
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [loading, setLoading] = useState(true)
@@ -160,6 +162,7 @@ export const ClientsPage = () => {
     setForm(emptyForm)
     setFeedback('')
     setError('')
+    setMobileSection('editor')
   }
 
   const handleSelect = (client) => {
@@ -175,6 +178,7 @@ export const ClientsPage = () => {
     })
     setFeedback('')
     setError('')
+    setMobileSection('editor')
   }
 
   const handleChange = (event) => {
@@ -226,6 +230,7 @@ export const ClientsPage = () => {
       setFeedback(copy.clients.feedback.deleted)
       setSelectedId(null)
       setForm(emptyForm)
+      setMobileSection('directory')
       await loadClients()
     } catch (deleteError) {
       setError(deleteError.response?.data?.message || copy.clients.feedback.deleteError)
@@ -259,8 +264,26 @@ export const ClientsPage = () => {
         }
       />
 
+      <MobileSectionTabs
+        className="sticky top-3 z-20"
+        value={mobileSection}
+        onChange={setMobileSection}
+        tabs={[
+          {
+            value: 'directory',
+            label: locale === 'es' ? 'Listado' : 'List',
+          },
+          {
+            value: 'editor',
+            label: locale === 'es' ? 'Editor' : 'Editor',
+          },
+        ]}
+      />
+
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1.45fr)_390px]">
-        <Card className="p-5 sm:p-6">
+        <Card
+          className={`${mobileSection !== 'directory' ? 'hidden xl:block' : ''} p-5 sm:p-6`}
+        >
           <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--moran-soft)]">
@@ -342,7 +365,9 @@ export const ClientsPage = () => {
           />
         </Card>
 
-        <Card className="p-5 sm:p-6">
+        <Card
+          className={`${mobileSection !== 'editor' ? 'hidden xl:block' : ''} p-5 sm:p-6`}
+        >
           <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--moran-soft)]">

@@ -7,6 +7,7 @@ import { Card } from '../../components/ui/Card.jsx'
 import { DataTable } from '../../components/ui/DataTable.jsx'
 import { EmptyState } from '../../components/ui/EmptyState.jsx'
 import { InputField } from '../../components/ui/InputField.jsx'
+import { MobileSectionTabs } from '../../components/ui/MobileSectionTabs.jsx'
 import { NoticeBanner } from '../../components/ui/NoticeBanner.jsx'
 import { PageHeader } from '../../components/ui/PageHeader.jsx'
 import { TableToolbar } from '../../components/ui/TableToolbar.jsx'
@@ -28,6 +29,7 @@ export const ServicesPage = () => {
   const [services, setServices] = useState([])
   const [form, setForm] = useState(emptyForm)
   const [selectedId, setSelectedId] = useState(null)
+  const [mobileSection, setMobileSection] = useState('catalog')
   const [searchQuery, setSearchQuery] = useState('')
   const [activityFilter, setActivityFilter] = useState('all')
   const [loading, setLoading] = useState(true)
@@ -159,6 +161,7 @@ export const ServicesPage = () => {
     })
     setFeedback('')
     setError('')
+    setMobileSection('editor')
   }
 
   const handleNew = () => {
@@ -166,6 +169,7 @@ export const ServicesPage = () => {
     setForm(emptyForm)
     setFeedback('')
     setError('')
+    setMobileSection('editor')
   }
 
   const handleChange = (event) => {
@@ -222,6 +226,7 @@ export const ServicesPage = () => {
       setFeedback(copy.services.feedback.deleted)
       setSelectedId(null)
       setForm(emptyForm)
+      setMobileSection('catalog')
       await loadServices()
     } catch (deleteError) {
       setError(deleteError.response?.data?.message || copy.services.feedback.deleteError)
@@ -255,8 +260,26 @@ export const ServicesPage = () => {
         }
       />
 
+      <MobileSectionTabs
+        className="sticky top-3 z-20"
+        value={mobileSection}
+        onChange={setMobileSection}
+        tabs={[
+          {
+            value: 'catalog',
+            label: locale === 'es' ? 'Catalogo' : 'Catalog',
+          },
+          {
+            value: 'editor',
+            label: locale === 'es' ? 'Editor' : 'Editor',
+          },
+        ]}
+      />
+
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1.4fr)_390px]">
-        <Card className="p-5 sm:p-6">
+        <Card
+          className={`${mobileSection !== 'catalog' ? 'hidden xl:block' : ''} p-5 sm:p-6`}
+        >
           <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--moran-soft)]">
@@ -340,7 +363,9 @@ export const ServicesPage = () => {
           />
         </Card>
 
-        <Card className="p-5 sm:p-6">
+        <Card
+          className={`${mobileSection !== 'editor' ? 'hidden xl:block' : ''} p-5 sm:p-6`}
+        >
           <div className="mb-6">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--moran-soft)]">
               {copy.services.sections.editor}

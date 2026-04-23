@@ -7,6 +7,7 @@ import { Card } from '../../components/ui/Card.jsx'
 import { DataTable } from '../../components/ui/DataTable.jsx'
 import { EmptyState } from '../../components/ui/EmptyState.jsx'
 import { InputField } from '../../components/ui/InputField.jsx'
+import { MobileSectionTabs } from '../../components/ui/MobileSectionTabs.jsx'
 import { NoticeBanner } from '../../components/ui/NoticeBanner.jsx'
 import { PageHeader } from '../../components/ui/PageHeader.jsx'
 import { SelectField } from '../../components/ui/SelectField.jsx'
@@ -39,6 +40,7 @@ export const ExpensesPage = () => {
   const [dashboard, setDashboard] = useState(null)
   const [form, setForm] = useState(createEmptyForm())
   const [selectedId, setSelectedId] = useState(null)
+  const [mobileSection, setMobileSection] = useState('ledger')
   const [searchQuery, setSearchQuery] = useState('')
   const [scopeFilter, setScopeFilter] = useState('all')
   const [projectFilter, setProjectFilter] = useState('all')
@@ -386,6 +388,7 @@ export const ExpensesPage = () => {
     setForm(createEmptyForm())
     setFeedback('')
     setError('')
+    setMobileSection('editor')
   }
 
   const handleSelect = (expense) => {
@@ -402,6 +405,7 @@ export const ExpensesPage = () => {
     })
     setFeedback('')
     setError('')
+    setMobileSection('editor')
   }
 
   const handleChange = (event) => {
@@ -465,6 +469,7 @@ export const ExpensesPage = () => {
       setFeedback(uiText.feedback.deleted)
       setSelectedId(null)
       setForm(createEmptyForm())
+      setMobileSection('ledger')
       await loadData()
     } catch (deleteError) {
       setError(deleteError.response?.data?.message || uiText.feedback.deleteError)
@@ -498,7 +503,7 @@ export const ExpensesPage = () => {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         {[
           [uiText.stats.fixedMonth, summary.fixedMonth, 'text-[var(--moran-ink)]'],
           [uiText.stats.projectMonth, summary.projectMonth, 'text-[var(--moran-olive)]'],
@@ -526,8 +531,30 @@ export const ExpensesPage = () => {
         </Card>
       ) : null}
 
+      <MobileSectionTabs
+        className="sticky top-3 z-20"
+        value={mobileSection}
+        onChange={setMobileSection}
+        tabs={[
+          {
+            value: 'ledger',
+            label: locale === 'es' ? 'Gastos' : 'Expenses',
+          },
+          {
+            value: 'editor',
+            label: locale === 'es' ? 'Editor' : 'Editor',
+          },
+          {
+            value: 'profitability',
+            label: locale === 'es' ? 'Ganancia' : 'Profit',
+          },
+        ]}
+      />
+
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1.45fr)_390px]">
-        <Card className="p-5 sm:p-6">
+        <Card
+          className={`${mobileSection !== 'ledger' ? 'hidden xl:block' : ''} p-5 sm:p-6`}
+        >
           <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--moran-soft)]">
@@ -622,7 +649,9 @@ export const ExpensesPage = () => {
           />
         </Card>
 
-        <Card className="p-5 sm:p-6">
+        <Card
+          className={`${mobileSection !== 'editor' ? 'hidden xl:block' : ''} p-5 sm:p-6`}
+        >
           <div className="mb-6">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--moran-soft)]">
               {uiText.sections.editor}
@@ -741,7 +770,9 @@ export const ExpensesPage = () => {
         </Card>
       </div>
 
-      <Card className="p-5 sm:p-6">
+      <Card
+        className={`${mobileSection !== 'profitability' ? 'hidden xl:block' : ''} p-5 sm:p-6`}
+      >
         <div className="mb-6 flex items-center gap-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[rgba(214,164,164,0.16)] text-[var(--moran-ink)]">
             <Wallet size={20} />
