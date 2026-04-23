@@ -1,15 +1,16 @@
 const bcrypt = require('bcryptjs')
+const env = require('../config/env')
 
 const DEFAULT_ADMIN = {
-  name: 'Moran Studio Admin',
-  email: 'admin@moranstudio.local',
-  password: 'MoranAdmin123!',
-  role: 'admin',
+  name: env.ADMIN_NAME,
+  email: env.ADMIN_EMAIL,
+  password: env.ADMIN_PASSWORD,
+  role: env.ADMIN_ROLE,
 }
 
 const seedDatabase = (db) => {
   const existingUser = db
-    .prepare('SELECT id FROM users WHERE email = ?')
+    .prepare('SELECT id FROM users WHERE LOWER(email) = ?')
     .get(DEFAULT_ADMIN.email)
 
   if (!existingUser) {
@@ -24,6 +25,27 @@ const seedDatabase = (db) => {
       passwordHash,
       DEFAULT_ADMIN.role
     )
+
+    console.log(`[seed] Admin user created for ${DEFAULT_ADMIN.email}`)
+    return
+  }
+
+  if (env.ADMIN_SYNC_ON_BOOT) {
+    const passwordHash = bcrypt.hashSync(DEFAULT_ADMIN.password, 10)
+
+    db.prepare(`
+      UPDATE users
+      SET name = ?, email = ?, password_hash = ?, role = ?
+      WHERE id = ?
+    `).run(
+      DEFAULT_ADMIN.name,
+      DEFAULT_ADMIN.email,
+      passwordHash,
+      DEFAULT_ADMIN.role,
+      existingUser.id
+    )
+
+    console.log(`[seed] Admin user synchronized for ${DEFAULT_ADMIN.email}`)
   }
 }
 

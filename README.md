@@ -119,6 +119,14 @@ Health check: `http://localhost:4000/api/health`
 - Email: `admin@moranstudio.local`
 - Password: `MoranAdmin123!`
 
+En produccion puedes sobreescribirlas con variables de entorno del backend:
+
+- `ADMIN_NAME`
+- `ADMIN_EMAIL`
+- `ADMIN_PASSWORD`
+- `ADMIN_ROLE`
+- `ADMIN_SYNC_ON_BOOT`
+
 ## Variables de entorno
 
 ### Backend
@@ -137,6 +145,11 @@ Health check: `http://localhost:4000/api/health`
 - `AUTH_RATE_LIMIT_WINDOW_MS`
 - `AUTH_RATE_LIMIT_MAX`
 - `TRUST_PROXY`
+- `ADMIN_NAME`
+- `ADMIN_EMAIL`
+- `ADMIN_PASSWORD`
+- `ADMIN_ROLE`
+- `ADMIN_SYNC_ON_BOOT`
 
 ### Frontend
 
@@ -212,8 +225,19 @@ Tambien soporta comodines como `https://*.vercel.app` para previews de Vercel.
    - `DATABASE_PATH=/var/data/moran-studio.db`
    - `JWT_SECRET=tu-secreto-seguro`
    - `CORS_ORIGINS=https://tu-frontend.vercel.app,https://*.vercel.app`
+   - `ADMIN_EMAIL=admin@moranstudio.local`
+   - `ADMIN_PASSWORD=MoranAdmin123!`
+   - `ADMIN_SYNC_ON_BOOT=true`
 5. Agrega un `Persistent Disk` montado en `/var/data`.
 6. Despliega.
+
+Si el login dice `Credenciales invalidas` en Vercel/Render, casi siempre significa que la SQLite de Render ya existe y el admin guardado ahi no coincide con lo que estas intentando usar. La forma mas rapida de corregirlo es:
+
+1. En Render define `ADMIN_EMAIL` y `ADMIN_PASSWORD` con las credenciales que quieras usar.
+2. Pon `ADMIN_SYNC_ON_BOOT=true`.
+3. Redeploy del backend.
+4. Inicia sesion con esas credenciales.
+5. Si quieres, luego cambia `ADMIN_SYNC_ON_BOOT=false` para que no reescriba el admin en cada arranque.
 
 ## Despliegue en Vercel
 

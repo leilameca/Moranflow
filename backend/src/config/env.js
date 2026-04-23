@@ -2,6 +2,10 @@ const path = require('path')
 
 const DEFAULT_JWT_SECRET = 'moran-studio-secret-key'
 const PROJECT_ROOT = path.resolve(__dirname, '..', '..')
+const DEFAULT_ADMIN_NAME = 'Moran Studio Admin'
+const DEFAULT_ADMIN_EMAIL = 'admin@moranstudio.local'
+const DEFAULT_ADMIN_PASSWORD = 'MoranAdmin123!'
+const DEFAULT_ADMIN_ROLE = 'admin'
 
 const parseNumber = (value, fallback) => {
   const parsed = Number(value)
@@ -46,6 +50,13 @@ const env = {
     process.env.DATABASE_PATH || process.env.DB_PATH,
     './data/moran-studio.db'
   ),
+  ADMIN_NAME: process.env.ADMIN_NAME || DEFAULT_ADMIN_NAME,
+  ADMIN_EMAIL: String(process.env.ADMIN_EMAIL || DEFAULT_ADMIN_EMAIL)
+    .trim()
+    .toLowerCase(),
+  ADMIN_PASSWORD: process.env.ADMIN_PASSWORD || DEFAULT_ADMIN_PASSWORD,
+  ADMIN_ROLE: process.env.ADMIN_ROLE || DEFAULT_ADMIN_ROLE,
+  ADMIN_SYNC_ON_BOOT: parseBoolean(process.env.ADMIN_SYNC_ON_BOOT, false),
 }
 
 env.IS_PROD = env.NODE_ENV === 'production'

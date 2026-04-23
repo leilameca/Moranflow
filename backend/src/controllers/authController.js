@@ -19,7 +19,7 @@ const login = async (req, res, next) => {
         `
           SELECT id, name, email, role, password_hash
           FROM users
-          WHERE email = ?
+          WHERE LOWER(email) = ?
         `
       )
       .get(email)
