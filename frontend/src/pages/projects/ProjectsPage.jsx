@@ -60,6 +60,30 @@ const STUDIO_CONTACT = {
   phone: '8092697630',
 }
 
+const formatInvoiceMoney = (value) =>
+  `RD$ ${new Intl.NumberFormat('es-DO', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(Number(value || 0))}`
+
+const formatInvoicePreviewDate = (value) => {
+  if (!value) {
+    return 'No especificada'
+  }
+
+  const date = new Date(value)
+
+  if (Number.isNaN(date.getTime())) {
+    return value
+  }
+
+  return new Intl.DateTimeFormat('es-DO', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+  }).format(date)
+}
+
 export const ProjectsPage = () => {
   const { copy, locale } = useLanguage()
   const [projects, setProjects] = useState([])
@@ -969,65 +993,154 @@ export const ProjectsPage = () => {
             />
           ) : (
             <div className="space-y-5">
-              <div className="overflow-hidden rounded-[30px] border border-[rgba(15,15,15,0.06)] bg-[linear-gradient(180deg,rgba(255,255,255,0.94)_0%,rgba(245,241,237,0.88)_100%)]">
+              <div className="overflow-hidden rounded-[30px] border border-[rgba(15,15,15,0.06)] bg-[#F5F1ED]">
                 <div className="bg-[var(--moran-ink)] px-5 py-5 text-white">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
                     <div className="space-y-3">
-                      <div className="flex h-14 w-[128px] items-center rounded-[22px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.05)] px-4 py-2">
+                      <div className="flex h-[60px] w-[96px] items-center">
                         <img src={logo} alt="Moran Studio logo" className="h-full w-full object-contain" />
                       </div>
                       <div>
-                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[rgba(255,255,255,0.58)]">
-                          {copy.projects.sections.invoicePreview}
+                        <p className="text-[11px] tracking-[0.35em] text-[#f1e7e2]">MORAN STUDIO</p>
+                        <p className="mt-1 text-[10px] tracking-[0.22em] text-[var(--moran-olive)]">
+                          DISENO, TECNOLOGIA Y SOLUCIONES
                         </p>
-                        <h3 className="font-display mt-3 text-3xl leading-none sm:text-4xl">
-                          {selectedProject.title}
-                        </h3>
                       </div>
                     </div>
 
-                    <div className="rounded-[24px] border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.06)] px-4 py-4 text-sm text-[rgba(255,255,255,0.78)]">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[rgba(255,255,255,0.56)]">
-                        Moran Studio
+                    <div className="text-left sm:text-right">
+                      <p className="font-display text-4xl leading-none text-[var(--moran-blush)]">FACTURA</p>
+                      <p className="mt-3 text-[11px] tracking-[0.16em] text-[var(--moran-olive)]">
+                        No. MS-PREVIA
                       </p>
-                      <p className="mt-2">{STUDIO_CONTACT.email}</p>
-                      <p>{STUDIO_CONTACT.phone}</p>
+                      <p className="mt-1 text-[11px] text-[var(--moran-blush)]">
+                        {formatInvoicePreviewDate(new Date())}
+                      </p>
+                      <div className="mt-3 inline-flex">
+                        <Badge tone={paymentToneMap[selectedProject.paymentStatus] || 'pending'}>
+                          {selectedProject.paymentStatus}
+                        </Badge>
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="grid gap-4 px-5 py-5 sm:grid-cols-2">
-                  <div className="rounded-[24px] bg-white/80 px-4 py-4">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--moran-soft)]">
-                      {copy.projects.form.client}
-                    </p>
-                    <p className="mt-2 text-base font-semibold text-[var(--moran-ink)]">
-                      {selectedProject.clientName}
-                    </p>
-                    <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--moran-soft)]">
-                      {copy.projects.form.service}
-                    </p>
-                    <p className="mt-2 text-base font-semibold text-[var(--moran-ink)]">
-                      {selectedProject.serviceName}
-                    </p>
+                <div className="h-[3px] bg-gradient-to-r from-[var(--moran-olive)] to-[var(--moran-blush)]" />
+
+                <div className="space-y-6 px-5 py-5">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {[
+                      [
+                        'Facturado por',
+                        ['Moran Studio', STUDIO_CONTACT.email, STUDIO_CONTACT.phone],
+                      ],
+                      [
+                        'Facturado a',
+                        [
+                          selectedProject.clientName,
+                          selectedProject.businessName || 'Cliente independiente',
+                          selectedProject.clientEmail || selectedProject.clientPhone || '-',
+                        ],
+                      ],
+                      ['Fecha de emision', [formatInvoicePreviewDate(new Date())]],
+                      [
+                        'Fecha limite de pago',
+                        [
+                          formatInvoicePreviewDate(
+                            selectedProject.dueDate || dayjs().add(7, 'day').format('YYYY-MM-DD')
+                          ),
+                        ],
+                      ],
+                    ].map(([label, lines]) => (
+                      <div key={label}>
+                        <p className="border-b border-[rgba(214,164,164,0.7)] pb-2 text-[10px] uppercase tracking-[0.26em] text-[var(--moran-olive)]">
+                          {label}
+                        </p>
+                        <div className="mt-3 space-y-1 text-sm leading-7 text-[var(--moran-ink)]">
+                          {lines.map((line) => (
+                            <p key={line}>{line}</p>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
                   </div>
 
-                  <div className="rounded-[24px] bg-white/80 px-4 py-4">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--moran-soft)]">
-                      {copy.projects.labels.agreedTotal}
-                    </p>
-                    <p className="mt-2 text-2xl font-semibold text-[var(--moran-ink)]">
-                      {formatCurrency(selectedProject.agreedPrice)}
-                    </p>
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      <Badge tone={statusToneMap[selectedProject.status] || 'pending'}>
-                        {translateProjectStatus(selectedProject.status)}
-                      </Badge>
-                      <Badge tone={paymentToneMap[selectedProject.paymentStatus] || 'pending'}>
-                        {translatePaymentStatus(selectedProject.paymentStatus)}
-                      </Badge>
+                  <div className="overflow-hidden rounded-[18px] border border-[rgba(15,15,15,0.06)] bg-white">
+                    <div className="grid grid-cols-[52px_minmax(0,1fr)_74px_116px_116px] bg-[var(--moran-ink)] px-4 py-3 text-[10px] uppercase tracking-[0.2em] text-white">
+                      <span>#</span>
+                      <span>Descripcion del servicio</span>
+                      <span className="text-center">Cant.</span>
+                      <span className="text-right">Precio unit.</span>
+                      <span className="text-right">Total</span>
+                    </div>
+                    <div className="grid grid-cols-[52px_minmax(0,1fr)_74px_116px_116px] items-start border-t border-[rgba(214,164,164,0.35)] px-4 py-4 text-sm text-[var(--moran-ink)]">
+                      <span>01</span>
+                      <div>
+                        <p className="font-semibold">{selectedProject.serviceName}</p>
+                        <p className="mt-1 text-xs leading-6 text-[var(--moran-soft)]">
+                          {invoiceNotes ||
+                            selectedProject.description ||
+                            selectedProject.notes ||
+                            selectedProject.title}
+                        </p>
+                      </div>
+                      <span className="text-center">1</span>
+                      <span className="text-right">{formatInvoiceMoney(selectedProject.agreedPrice)}</span>
+                      <span className="text-right">{formatInvoiceMoney(selectedProject.agreedPrice)}</span>
                     </div>
                   </div>
+
+                  <div className="flex justify-end">
+                    <div className="w-full max-w-[280px] space-y-3 text-sm">
+                      <div className="flex items-center justify-between border-b border-[rgba(214,164,164,0.35)] pb-2">
+                        <span>Subtotal</span>
+                        <span>{formatInvoiceMoney(selectedProject.agreedPrice)}</span>
+                      </div>
+                      <div className="flex items-center justify-between border-b border-[rgba(214,164,164,0.35)] pb-2">
+                        <span>Descuento (0%)</span>
+                        <span>--</span>
+                      </div>
+                      <div className="flex items-center justify-between border-b border-[rgba(214,164,164,0.35)] pb-2">
+                        <span>ITBIS (0%)</span>
+                        <span>No aplica</span>
+                      </div>
+                      <div className="flex items-center justify-between border-t-2 border-[var(--moran-olive)] pt-3">
+                        <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--moran-olive)]">
+                          Total
+                        </span>
+                        <span className="text-lg font-semibold text-[var(--moran-ink)]">
+                          {formatInvoiceMoney(selectedProject.agreedPrice)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-[18px] border border-[rgba(214,164,164,0.65)] bg-white px-4 py-4">
+                    <p className="text-[10px] uppercase tracking-[0.26em] text-[var(--moran-olive)]">
+                      Informacion de pago
+                    </p>
+                    <div className="mt-3 grid gap-4 text-sm leading-7 text-[var(--moran-ink)] sm:grid-cols-2">
+                      <div>
+                        <p>Estado: {selectedProject.paymentStatus}</p>
+                        <p>Pagado a la fecha: {formatInvoiceMoney(selectedProject.totalPaid)}</p>
+                        <p>Saldo pendiente: {formatInvoiceMoney(selectedProject.balance)}</p>
+                      </div>
+                      <div>
+                        <p>Metodo: Transferencia / Efectivo</p>
+                        <p>Referencia: MS-PREVIA</p>
+                        <p>Contacto: {STUDIO_CONTACT.phone}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-3 bg-[var(--moran-ink)] px-5 py-4 text-sm sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-[var(--moran-olive)]">
+                    {STUDIO_CONTACT.email} | {STUDIO_CONTACT.phone}
+                  </p>
+                  <p className="text-[11px] uppercase tracking-[0.28em] text-[var(--moran-blush)]">
+                    Gracias por tu confianza
+                  </p>
                 </div>
               </div>
 

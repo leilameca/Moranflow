@@ -6,6 +6,7 @@ import {
   Menu,
   Palette,
   Users2,
+  Wallet,
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
@@ -100,8 +101,13 @@ export const AppShell = () => {
         label: copy.layout.nav.projects,
         icon: BriefcaseBusiness,
       },
+      {
+        to: '/finances',
+        label: locale === 'es' ? 'Finanzas' : 'Finances',
+        icon: Wallet,
+      },
     ],
-    [copy.layout.nav]
+    [copy.layout.nav, locale]
   )
 
   const pageTitle = useMemo(() => {

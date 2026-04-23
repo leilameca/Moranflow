@@ -8,7 +8,7 @@ const { createHttpError } = require('../utils/http')
 
 const BRAND = {
   title: 'Moran Studio',
-  subtitle: 'Sistemas creativos y soluciones digitales',
+  subtitle: 'Diseno, tecnologia y soluciones digitales',
   contact: {
     email: 'leiladev20@gmial.com',
     phone: '8092697630',
@@ -20,6 +20,7 @@ const BRAND = {
     olive: '#6B705C',
     blush: '#D6A4A4',
     soft: '#8B8178',
+    border: '#E4D4CD',
   },
 }
 
@@ -39,7 +40,14 @@ const invoiceDetailsQuery = `
     c.phone AS client_phone,
     c.instagram AS client_instagram,
     s.name AS service_name,
-    COALESCE(pay.total_paid, 0) AS total_paid
+    COALESCE(pay.total_paid, 0) AS total_paid,
+    (
+      SELECT pay2.payment_method
+      FROM payments pay2
+      WHERE pay2.project_id = p.id
+      ORDER BY pay2.payment_date DESC, pay2.created_at DESC
+      LIMIT 1
+    ) AS latest_payment_method
   FROM invoices i
   INNER JOIN projects p ON p.id = i.project_id
   INNER JOIN clients c ON c.id = p.client_id
@@ -159,7 +167,7 @@ const getPaymentStatus = (invoice) => {
   return 'Pendiente'
 }
 
-const formatInvoiceDate = (value) => {
+const formatInvoiceDate = (value, month = 'long') => {
   if (!value) {
     return 'No especificada'
   }
@@ -172,32 +180,43 @@ const formatInvoiceDate = (value) => {
 
   return new Intl.DateTimeFormat('es-DO', {
     day: '2-digit',
-    month: 'short',
+    month,
     year: 'numeric',
   }).format(date)
 }
 
+const formatMoney = (value) =>
+  `RD$ ${new Intl.NumberFormat('es-DO', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(Number(value || 0))}`
+
+const buildServiceDescription = (invoice) =>
+  [
+    invoice.project_title,
+    invoice.project_description,
+    invoice.notes,
+  ]
+    .filter(Boolean)
+    .join(' / ')
+
+const getPaymentMethodLabel = (paymentMethod) => {
+  const labels = {
+    Transfer: 'Transferencia',
+    Cash: 'Efectivo',
+    Card: 'Tarjeta',
+    QR: 'QR',
+    'Bank deposit': 'Deposito bancario',
+    Other: 'Otro',
+  }
+
+  return labels[paymentMethod] || 'Por definir'
+}
+
 const generateInvoicePdf = (res, invoice) => {
-  const drawLabel = (text, x, y) => {
-    doc
-      .fillColor(brand.soft)
-      .fontSize(10)
-      .text(text, x, y, { characterSpacing: 0.7 })
-  }
-
-  const drawValue = (text, x, y, options = {}) => {
-    doc
-      .fillColor(brand.ink)
-      .fontSize(options.size || 12)
-      .text(text, x, y, {
-        width: options.width,
-        lineGap: options.lineGap || 3,
-      })
-  }
-
   const doc = new PDFDocument({
     size: 'A4',
-    margin: 48,
+    margin: 0,
   })
 
   res.setHeader('Content-Type', 'application/pdf')
@@ -208,175 +227,335 @@ const generateInvoicePdf = (res, invoice) => {
 
   doc.pipe(res)
 
-  const paymentStatus = getPaymentStatus(invoice)
-  const brand = BRAND.colors
-  const pageWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right
+  const colors = BRAND.colors
   const totalPaid = Number(invoice.total_paid || 0)
   const subtotal = Number(invoice.subtotal || 0)
   const total = Number(invoice.total || 0)
   const balanceDue = Math.max(total - totalPaid, 0)
-  const statusStyle =
+  const paymentStatus = getPaymentStatus(invoice)
+  const paymentDeadline = invoice.due_date || dayjs(invoice.issue_date).add(7, 'day').format('YYYY-MM-DD')
+  const statusTone =
     paymentStatus === 'Pagado'
-      ? { fill: '#E5EEE6', text: brand.olive }
+      ? { border: colors.olive, text: colors.olive }
       : paymentStatus === 'Parcial'
-        ? { fill: '#F4E4E4', text: '#8A5C5C' }
-        : { fill: '#F1EFEC', text: brand.ink }
-  const rightX = 322
-  const rightWidth = 225
+        ? { border: colors.blush, text: '#8A5C5C' }
+        : { border: colors.olive, text: colors.olive }
 
-  doc.rect(0, 0, doc.page.width, 174).fill(brand.ink)
+  const drawMetaBlock = (label, lines, x, y, width) => {
+    doc
+      .fillColor(colors.olive)
+      .font('Helvetica')
+      .fontSize(9)
+      .text(label.toUpperCase(), x, y, {
+        width,
+        characterSpacing: 2.2,
+      })
+
+    doc
+      .moveTo(x, y + 18)
+      .lineTo(x + width, y + 18)
+      .lineWidth(0.7)
+      .strokeColor(colors.blush)
+      .stroke()
+
+    doc
+      .fillColor(colors.ink)
+      .font('Helvetica')
+      .fontSize(12)
+      .text(lines.join('\n'), x, y + 28, {
+        width,
+        lineGap: 4,
+      })
+  }
+
+  doc.rect(0, 0, doc.page.width, 142).fill(colors.ink)
 
   if (fs.existsSync(LOGO_PATH)) {
-    doc.image(LOGO_PATH, 48, 34, { fit: [176, 78], align: 'left', valign: 'center' })
-
-    doc
-      .fillColor('#E7DDD8')
-      .fontSize(10)
-      .text(BRAND.title.toUpperCase(), 48, 112, { characterSpacing: 1.8 })
-      .fontSize(11)
-      .fillColor(brand.blush)
-      .text(BRAND.subtitle, 48, 128)
-  } else {
-    doc
-      .fillColor(brand.paper)
-      .fontSize(28)
-      .text(BRAND.title, 48, 45)
-      .fontSize(11)
-      .fillColor(brand.blush)
-      .text(BRAND.subtitle, 48, 82)
-  }
-
-  doc
-    .fillColor(brand.paper)
-    .fontSize(12)
-    .text('Factura', rightX, 42, { width: rightWidth, align: 'right' })
-    .fontSize(22)
-    .text(invoice.invoice_number, rightX, 62, { width: rightWidth, align: 'right' })
-    .fontSize(10)
-    .fillColor('#E7DDD8')
-    .text(`Emitida ${formatInvoiceDate(invoice.issue_date)}`, rightX, 96, {
-      width: rightWidth,
-      align: 'right',
-    })
-
-  if (invoice.due_date) {
-    doc.text(`Entrega ${formatInvoiceDate(invoice.due_date)}`, rightX, 113, {
-      width: rightWidth,
-      align: 'right',
+    doc.image(LOGO_PATH, 48, 32, {
+      fit: [92, 62],
+      align: 'left',
+      valign: 'center',
     })
   }
 
-  doc.roundedRect(436, 134, 111, 28, 14).fill(statusStyle.fill)
   doc
-    .fillColor(statusStyle.text)
+    .fillColor(colors.paper)
+    .font('Helvetica')
+    .fontSize(13)
+    .text(BRAND.title.toUpperCase(), 48, 102, {
+      characterSpacing: 4,
+    })
+    .fillColor(colors.olive)
     .fontSize(10)
-    .text(paymentStatus.toUpperCase(), 436, 143, {
-      width: 111,
+    .text(BRAND.subtitle.toUpperCase(), 48, 119, {
+      characterSpacing: 2.2,
+    })
+
+  doc
+    .fillColor(colors.blush)
+    .font('Helvetica')
+    .fontSize(28)
+    .text('FACTURA', 348, 38, {
+      width: 200,
+      align: 'right',
+      characterSpacing: 4,
+    })
+    .fillColor(colors.olive)
+    .fontSize(11)
+    .text(`No. ${invoice.invoice_number}`, 348, 74, {
+      width: 200,
+      align: 'right',
+      characterSpacing: 1.5,
+    })
+    .fillColor(colors.blush)
+    .fontSize(11)
+    .text(formatInvoiceDate(invoice.issue_date, 'long'), 348, 92, {
+      width: 200,
+      align: 'right',
+    })
+
+  doc
+    .roundedRect(440, 113, 108, 24, 12)
+    .lineWidth(0.8)
+    .strokeColor(statusTone.border)
+    .stroke()
+    .fillColor(statusTone.text)
+    .font('Helvetica-Bold')
+    .fontSize(9)
+    .text(paymentStatus.toUpperCase(), 440, 121, {
+      width: 108,
       align: 'center',
-      characterSpacing: 1.1,
+      characterSpacing: 1.8,
     })
 
-  doc
-    .fillColor(brand.ink)
-    .roundedRect(48, 196, 239, 134, 18)
-    .fill(brand.beige)
+  doc.rect(0, 142, doc.page.width, 3).fill(colors.olive)
+  doc.rect(180, 142, doc.page.width - 180, 3).fill(colors.blush)
 
-  doc.roundedRect(309, 196, 238, 134, 18).fill('#FBF9F7')
+  const bodyX = 48
+  const bodyWidth = doc.page.width - 96
+  const columnWidth = (bodyWidth - 24) / 2
+  const metaTop = 182
 
-  drawLabel('Cliente', 68, 218)
-  drawValue(invoice.client_name, 68, 236, { size: 16, width: 190 })
+  drawMetaBlock(
+    'Facturado por',
+    [
+      BRAND.title,
+      BRAND.subtitle,
+      BRAND.contact.email,
+      BRAND.contact.phone,
+    ],
+    bodyX,
+    metaTop,
+    columnWidth
+  )
+
+  drawMetaBlock(
+    'Facturado a',
+    [
+      invoice.client_name,
+      invoice.business_name || 'Cliente independiente',
+      invoice.client_email || 'Sin correo registrado',
+      invoice.client_phone || invoice.client_instagram || 'Sin contacto adicional',
+    ],
+    bodyX + columnWidth + 24,
+    metaTop,
+    columnWidth
+  )
+
+  drawMetaBlock(
+    'Fecha de emision',
+    [formatInvoiceDate(invoice.issue_date)],
+    bodyX,
+    284,
+    columnWidth
+  )
+
+  drawMetaBlock(
+    'Fecha limite de pago',
+    [formatInvoiceDate(paymentDeadline)],
+    bodyX + columnWidth + 24,
+    284,
+    columnWidth
+  )
+
+  const tableTop = 372
+  const tableWidth = bodyWidth
+  const columnX = {
+    number: bodyX,
+    description: bodyX + 46,
+    quantity: bodyX + 326,
+    unitPrice: bodyX + 392,
+    total: bodyX + 490,
+  }
+
+  const descriptionText = invoice.service_name
+  const descriptionSubtext =
+    buildServiceDescription(invoice) ||
+    'Servicio profesional desarrollado por Moran Studio.'
+  const descriptionHeight = Math.max(
+    doc.heightOfString(descriptionSubtext, {
+      width: 250,
+      font: 'Helvetica',
+      size: 10,
+      lineGap: 2,
+    }),
+    14
+  )
+  const rowHeight = 34 + descriptionHeight
+
+  doc.rect(bodyX, tableTop, tableWidth, 32).fill(colors.ink)
   doc
-    .fillColor(brand.soft)
+    .fillColor(colors.paper)
+    .font('Helvetica')
     .fontSize(10)
-    .text(invoice.business_name || 'Cliente independiente', 68, 260, { width: 190 })
-    .text(invoice.client_email || 'Sin correo registrado', 68, 278, { width: 190 })
-    .text(
-      invoice.client_phone || invoice.client_instagram || 'Sin contacto adicional registrado',
-      68,
-      296,
-      { width: 190 }
-    )
+    .text('#', columnX.number + 10, tableTop + 11)
+    .text('Descripcion del servicio', columnX.description + 6, tableTop + 11)
+    .text('Cant.', columnX.quantity, tableTop + 11, { width: 44, align: 'center' })
+    .text('Precio unit.', columnX.unitPrice, tableTop + 11, { width: 76, align: 'right' })
+    .text('Total', columnX.total, tableTop + 11, { width: 58, align: 'right' })
 
-  drawLabel('Estudio', 329, 218)
-  drawValue(BRAND.title, 329, 236, { size: 16, width: 180 })
+  const rowTop = tableTop + 32
+  doc.rect(bodyX, rowTop, tableWidth, rowHeight).fill(colors.paper)
   doc
-    .fillColor(brand.soft)
-    .fontSize(10)
-    .text(BRAND.subtitle, 329, 260, { width: 180, lineGap: 3 })
-    .text(BRAND.contact.email, 329, 289, { width: 180 })
-    .text(BRAND.contact.phone, 329, 307, { width: 180 })
-
-  doc.roundedRect(48, 356, 316, 166, 18).fill('#FFFFFF')
-  doc.roundedRect(378, 356, 169, 166, 18).fill(brand.olive)
-
-  drawLabel('Resumen del servicio', 68, 378)
-  drawValue(invoice.service_name, 68, 396, { size: 18, width: 260 })
-
-  drawLabel('Proyecto', 68, 432)
-  drawValue(invoice.project_title, 68, 450, { width: 260 })
-
-  drawLabel('Fechas', 68, 484)
-  doc
-    .fillColor(brand.ink)
-    .fontSize(11)
-    .text(
-      `${invoice.start_date ? formatInvoiceDate(invoice.start_date) : 'No especificada'} - ${
-        invoice.due_date ? formatInvoiceDate(invoice.due_date) : 'Entrega abierta'
-      }`,
-      68,
-      502,
-      { width: 260 }
-    )
-
-  doc
-    .fillColor(brand.paper)
-    .fontSize(10)
-    .text('Resumen financiero', 398, 378)
-    .fontSize(11)
-    .text('Subtotal', 398, 410)
-    .text('Pagado a la fecha', 398, 442)
-    .text('Saldo pendiente', 398, 474)
-    .fontSize(17)
-    .text(`$${subtotal.toFixed(2)}`, 398, 423)
-    .text(`$${totalPaid.toFixed(2)}`, 398, 455)
-    .text(`$${balanceDue.toFixed(2)}`, 398, 487)
-
-  doc.roundedRect(48, 546, pageWidth, 124, 18).fill('#FBF9F7')
-  drawLabel('Detalles del proyecto y notas', 68, 568)
-  doc
-    .fillColor('#4F473F')
-    .fontSize(11)
-    .text(
-      invoice.project_description ||
-        invoice.notes ||
-        'Servicio creativo y tecnico personalizado entregado por Moran Studio.',
-      68,
-      590,
-      {
-        width: pageWidth - 40,
-        lineGap: 5,
-      }
-    )
-
-  doc
-    .moveTo(48, 704)
-    .lineTo(547, 704)
-    .strokeColor('#E9E0D9')
+    .moveTo(bodyX, rowTop + rowHeight)
+    .lineTo(bodyX + tableWidth, rowTop + rowHeight)
+    .lineWidth(0.7)
+    .strokeColor(colors.border)
     .stroke()
 
   doc
-    .fontSize(10)
-    .fillColor(brand.soft)
-    .text('Moran Studio', 48, 722)
-    .text(`Contacto: ${BRAND.contact.email} / ${BRAND.contact.phone}`, 48, 738)
-    .text('Experiencias digitales premium, sistemas y soluciones visuales.', 48, 754)
-    .text(`Generada el ${formatInvoiceDate(dayjs().format('YYYY-MM-DD'))}`, 336, 722, {
-      align: 'right',
-      width: 211,
+    .fillColor(colors.ink)
+    .font('Helvetica')
+    .fontSize(12)
+    .text('01', columnX.number + 10, rowTop + 12)
+
+  doc
+    .font('Helvetica-Bold')
+    .fontSize(12)
+    .text(descriptionText, columnX.description + 6, rowTop + 10, {
+      width: 250,
     })
-    .text('Gracias por confiar en Moran Studio para tu proyecto.', 336, 738, {
+    .font('Helvetica')
+    .fillColor(colors.olive)
+    .fontSize(10)
+    .text(descriptionSubtext, columnX.description + 6, rowTop + 28, {
+      width: 250,
+      lineGap: 2,
+    })
+
+  doc
+    .fillColor(colors.ink)
+    .font('Helvetica')
+    .fontSize(11)
+    .text('1', columnX.quantity, rowTop + 18, {
+      width: 44,
+      align: 'center',
+    })
+    .text(formatMoney(subtotal), columnX.unitPrice, rowTop + 18, {
+      width: 76,
       align: 'right',
-      width: 211,
+    })
+    .text(formatMoney(total), columnX.total, rowTop + 18, {
+      width: 58,
+      align: 'right',
+    })
+
+  const totalsTop = rowTop + rowHeight + 28
+  const totalsX = bodyX + tableWidth - 280
+
+  const drawTotalRow = (label, value, y, isTotal = false) => {
+    if (isTotal) {
+      doc
+        .moveTo(totalsX, y - 6)
+        .lineTo(totalsX + 280, y - 6)
+        .lineWidth(1.4)
+        .strokeColor(colors.olive)
+        .stroke()
+    } else {
+      doc
+        .moveTo(totalsX, y + 16)
+        .lineTo(totalsX + 280, y + 16)
+        .lineWidth(0.6)
+        .strokeColor(colors.border)
+        .stroke()
+    }
+
+    doc
+      .fillColor(isTotal ? colors.olive : colors.ink)
+      .font(isTotal ? 'Helvetica-Bold' : 'Helvetica')
+      .fontSize(isTotal ? 11 : 12)
+      .text(label, totalsX, y, {
+        width: 160,
+      })
+      .fillColor(colors.ink)
+      .font(isTotal ? 'Helvetica-Bold' : 'Helvetica')
+      .fontSize(isTotal ? 16 : 12)
+      .text(value, totalsX + 160, y, {
+        width: 120,
+        align: 'right',
+      })
+  }
+
+  drawTotalRow('Subtotal', formatMoney(subtotal), totalsTop)
+  drawTotalRow('Descuento (0%)', '--', totalsTop + 26)
+  drawTotalRow('ITBIS (0%)', 'No aplica', totalsTop + 52)
+  drawTotalRow('TOTAL', formatMoney(total), totalsTop + 86, true)
+
+  const paymentBoxTop = totalsTop + 132
+  const paymentBoxHeight = 100
+
+  doc
+    .roundedRect(bodyX, paymentBoxTop, tableWidth, paymentBoxHeight, 8)
+    .lineWidth(0.8)
+    .strokeColor(colors.blush)
+    .fillAndStroke(colors.paper, colors.blush)
+
+  doc
+    .fillColor(colors.olive)
+    .font('Helvetica')
+    .fontSize(9)
+    .text('INFORMACION DE PAGO', bodyX + 20, paymentBoxTop + 16, {
+      characterSpacing: 2.6,
+    })
+
+  doc
+    .fillColor(colors.ink)
+    .font('Helvetica')
+    .fontSize(11)
+    .text(
+      `Estado: ${paymentStatus}\nPagado a la fecha: ${formatMoney(totalPaid)}\nSaldo pendiente: ${formatMoney(balanceDue)}`,
+      bodyX + 20,
+      paymentBoxTop + 38,
+      {
+        width: 220,
+        lineGap: 6,
+      }
+    )
+    .text(
+      `Metodo registrado: ${getPaymentMethodLabel(invoice.latest_payment_method)}\nReferencia: ${invoice.invoice_number}\nContacto: ${BRAND.contact.phone}`,
+      bodyX + 300,
+      paymentBoxTop + 38,
+      {
+        width: 220,
+        lineGap: 6,
+      }
+    )
+
+  const footerTop = paymentBoxTop + paymentBoxHeight + 28
+
+  doc.rect(0, footerTop, doc.page.width, 72).fill(colors.ink)
+  doc
+    .fillColor(colors.olive)
+    .font('Helvetica')
+    .fontSize(10)
+    .text(`${BRAND.contact.email} | ${BRAND.contact.phone}`, 48, footerTop + 24)
+    .fillColor(colors.blush)
+    .font('Helvetica-Bold')
+    .fontSize(11)
+    .text('GRACIAS POR TU CONFIANZA', 330, footerTop + 24, {
+      width: 220,
+      align: 'right',
+      characterSpacing: 2.2,
     })
 
   doc.end()

@@ -27,14 +27,12 @@ const projectSchema = z.object({
 
 const projectListQuery = `
   ${projectBaseQuery}
-  GROUP BY p.id
   ORDER BY p.created_at DESC
 `
 
 const projectByIdQuery = `
   ${projectBaseQuery}
   WHERE p.id = ?
-  GROUP BY p.id
 `
 
 const ensureReferencesExist = ({ clientId, serviceId }) => {
@@ -102,10 +100,34 @@ const getProject = (req, res, next) => {
         notes: invoice.notes,
       }))
 
+    const expenses = db
+      .prepare(
+        `
+          SELECT *
+          FROM expenses
+          WHERE project_id = ?
+          ORDER BY expense_date DESC, created_at DESC
+        `
+      )
+      .all(id)
+      .map((expense) => ({
+        id: expense.id,
+        projectId: expense.project_id,
+        scope: expense.scope,
+        title: expense.title,
+        category: expense.category,
+        amount: Number(expense.amount || 0),
+        expenseDate: expense.expense_date,
+        vendor: expense.vendor,
+        note: expense.note,
+        createdAt: expense.created_at,
+      }))
+
     res.json({
       item: {
         ...toProjectResponse(project),
         payments,
+        expenses,
         invoices,
       },
     })

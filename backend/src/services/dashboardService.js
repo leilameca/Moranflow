@@ -18,6 +18,11 @@ const getDashboardData = () => {
             WHERE payment_date >= ?
           ) AS month_income,
           (
+            SELECT COALESCE(SUM(amount), 0)
+            FROM expenses
+            WHERE expense_date >= ?
+          ) AS month_expenses,
+          (
             SELECT COALESCE(SUM(p.agreed_price), 0) - COALESCE(SUM(pay_totals.total_paid), 0)
             FROM projects p
             LEFT JOIN (
@@ -28,7 +33,7 @@ const getDashboardData = () => {
           ) AS pending_amount
       `
     )
-    .get(monthStart)
+    .get(monthStart, monthStart)
 
   const topServices = db
     .prepare(
@@ -65,13 +70,36 @@ const getDashboardData = () => {
     paymentsByMonth.map((item) => [item.month_key, Number(item.income || 0)])
   )
 
+  const expensesByMonth = db
+    .prepare(
+      `
+        SELECT
+          substr(expense_date, 1, 7) AS month_key,
+          COALESCE(SUM(amount), 0) AS expenses
+        FROM expenses
+        WHERE expense_date >= ?
+        GROUP BY month_key
+        ORDER BY month_key ASC
+      `
+    )
+    .all(dayjs().subtract(5, 'month').startOf('month').format('YYYY-MM-DD'))
+
+  const expenseMap = new Map(
+    expensesByMonth.map((item) => [item.month_key, Number(item.expenses || 0)])
+  )
+
   const incomeSeries = Array.from({ length: 6 }, (_, index) => {
     const month = dayjs().subtract(5 - index, 'month')
     const monthKey = month.format('YYYY-MM')
+    const income = monthMap.get(monthKey) || 0
+    const expenses = expenseMap.get(monthKey) || 0
+
     return {
       month: month.format('MMM'),
       label: month.format('MMM YYYY'),
-      income: monthMap.get(monthKey) || 0,
+      income,
+      expenses,
+      netProfit: income - expenses,
       isCurrentMonth: monthKey === currentMonthLabel,
     }
   })
@@ -103,6 +131,8 @@ const getDashboardData = () => {
       activeClients: Number(counts.active_clients || 0),
       projectsInProgress: Number(counts.projects_in_progress || 0),
       monthIncome: Number(counts.month_income || 0),
+      monthExpenses: Number(counts.month_expenses || 0),
+      monthNetProfit: Number(counts.month_income || 0) - Number(counts.month_expenses || 0),
       pendingAmount: Math.max(Number(counts.pending_amount || 0), 0),
     },
     topServices: topServices.map((service) => ({

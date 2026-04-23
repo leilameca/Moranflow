@@ -59,6 +59,20 @@ const createTables = (db) => {
       FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS expenses (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      project_id INTEGER,
+      scope TEXT NOT NULL DEFAULT 'fixed',
+      title TEXT NOT NULL,
+      category TEXT,
+      amount REAL NOT NULL,
+      expense_date TEXT NOT NULL,
+      vendor TEXT,
+      note TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+    );
+
     CREATE TABLE IF NOT EXISTS invoices (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       project_id INTEGER NOT NULL,
@@ -74,6 +88,8 @@ const createTables = (db) => {
     CREATE INDEX IF NOT EXISTS idx_projects_client_id ON projects(client_id);
     CREATE INDEX IF NOT EXISTS idx_projects_service_id ON projects(service_id);
     CREATE INDEX IF NOT EXISTS idx_payments_project_id ON payments(project_id);
+    CREATE INDEX IF NOT EXISTS idx_expenses_project_id ON expenses(project_id);
+    CREATE INDEX IF NOT EXISTS idx_expenses_scope ON expenses(scope);
     CREATE INDEX IF NOT EXISTS idx_invoices_project_id ON invoices(project_id);
   `)
 }

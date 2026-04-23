@@ -35,6 +35,12 @@ const ProjectsPage = lazy(() =>
   }))
 )
 
+const ExpensesPage = lazy(() =>
+  import('./pages/expenses/ExpensesPage.jsx').then((module) => ({
+    default: module.ExpensesPage,
+  }))
+)
+
 const ProtectedRoute = () => {
   const { isAuthenticated, loading } = useAuth()
 
@@ -78,6 +84,7 @@ function App() {
             <Route path="/clients" element={<ClientsPage />} />
             <Route path="/services" element={<ServicesPage />} />
             <Route path="/projects" element={<ProjectsPage />} />
+            <Route path="/finances" element={<ExpensesPage />} />
           </Route>
         </Route>
 

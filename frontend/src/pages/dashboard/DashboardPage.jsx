@@ -15,7 +15,7 @@ import { moranApi } from '../../services/moranApi.js'
 import { formatCurrency } from '../../utils/formatters.js'
 
 export const DashboardPage = () => {
-  const { copy } = useLanguage()
+  const { copy, locale } = useLanguage()
   const [dashboard, setDashboard] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -69,8 +69,37 @@ export const DashboardPage = () => {
     activeClients: 0,
     projectsInProgress: 0,
     monthIncome: 0,
+    monthExpenses: 0,
+    monthNetProfit: 0,
     pendingAmount: 0,
   }
+
+  const extraMetrics =
+    locale === 'es'
+      ? [
+          {
+            key: 'monthExpenses',
+            label: 'Gastos del mes',
+            helper: 'Todos los gastos registrados durante el mes actual.',
+          },
+          {
+            key: 'monthNetProfit',
+            label: 'Ganancia neta',
+            helper: 'Cobrado del mes menos gastos del mismo periodo.',
+          },
+        ]
+      : [
+          {
+            key: 'monthExpenses',
+            label: 'Expenses this month',
+            helper: 'All expenses registered during the current month.',
+          },
+          {
+            key: 'monthNetProfit',
+            label: 'Net profit',
+            helper: 'Collected this month minus expenses from the same period.',
+          },
+        ]
 
   const heroItems = [
     copy.dashboard.hero.snapshotItems[0],
@@ -85,6 +114,21 @@ export const DashboardPage = () => {
     formatCurrency(metrics.monthIncome),
     formatCurrency(metrics.pendingAmount),
   ]
+
+  const financialHighlights =
+    locale === 'es'
+      ? [
+          [copy.dashboard.hero.monthCollected, metrics.monthIncome],
+          ['Gastos del mes', metrics.monthExpenses],
+          ['Ganancia neta', metrics.monthNetProfit],
+          [copy.dashboard.hero.pendingBalance, metrics.pendingAmount],
+        ]
+      : [
+          [copy.dashboard.hero.monthCollected, metrics.monthIncome],
+          ['Expenses this month', metrics.monthExpenses],
+          ['Net profit', metrics.monthNetProfit],
+          [copy.dashboard.hero.pendingBalance, metrics.pendingAmount],
+        ]
 
   return (
     <div className="space-y-8">
@@ -120,18 +164,17 @@ export const DashboardPage = () => {
             </p>
 
             <div className="mt-8 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.06)] px-4 py-3">
-                <p className="text-xs uppercase tracking-[0.16em] text-[rgba(255,255,255,0.58)]">
-                  {copy.dashboard.hero.monthCollected}
-                </p>
-                <p className="mt-2 text-xl font-semibold">{formatCurrency(metrics.monthIncome)}</p>
-              </div>
-              <div className="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.06)] px-4 py-3">
-                <p className="text-xs uppercase tracking-[0.16em] text-[rgba(255,255,255,0.58)]">
-                  {copy.dashboard.hero.pendingBalance}
-                </p>
-                <p className="mt-2 text-xl font-semibold">{formatCurrency(metrics.pendingAmount)}</p>
-              </div>
+              {financialHighlights.map(([label, value]) => (
+                <div
+                  key={label}
+                  className="rounded-2xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.06)] px-4 py-3"
+                >
+                  <p className="text-xs uppercase tracking-[0.16em] text-[rgba(255,255,255,0.58)]">
+                    {label}
+                  </p>
+                  <p className="mt-2 text-xl font-semibold">{formatCurrency(value)}</p>
+                </div>
+              ))}
             </div>
           </div>
 
@@ -174,9 +217,11 @@ export const DashboardPage = () => {
       ) : null}
 
       <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
-        {copy.dashboard.metrics.map((metric, index) => {
+        {[...copy.dashboard.metrics, ...extraMetrics].map((metric, index) => {
           const value =
             metric.key === 'monthIncome' || metric.key === 'pendingAmount'
+              ? formatCurrency(metrics[metric.key])
+              : metric.key === 'monthExpenses' || metric.key === 'monthNetProfit'
               ? formatCurrency(metrics[metric.key])
               : metrics[metric.key]
 
@@ -185,6 +230,8 @@ export const DashboardPage = () => {
             'rgba(107, 112, 92, 0.22)',
             'rgba(15, 15, 15, 0.12)',
             'rgba(245, 241, 237, 0.92)',
+            'rgba(15, 15, 15, 0.08)',
+            'rgba(107, 112, 92, 0.16)',
           ]
 
           return (

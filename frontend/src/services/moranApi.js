@@ -87,6 +87,25 @@ export const moranApi = {
     await api.delete(`/payments/${id}`)
   },
 
+  async getExpenses() {
+    const { data } = await api.get('/expenses')
+    return data
+  },
+
+  async createExpense(payload) {
+    const { data } = await api.post('/expenses', payload)
+    return data
+  },
+
+  async updateExpense(id, payload) {
+    const { data } = await api.put(`/expenses/${id}`, payload)
+    return data
+  },
+
+  async deleteExpense(id) {
+    await api.delete(`/expenses/${id}`)
+  },
+
   async getInvoices() {
     const { data } = await api.get('/invoices')
     return data
